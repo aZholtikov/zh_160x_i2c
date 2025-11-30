@@ -1,9 +1,13 @@
+/**
+ * @file zh_160x_i2c.h
+ */
+
 #pragma once
 
 #include "zh_pcf8574.h"
 
-#define ZH_LCD_16X2 1
-#define ZH_LCD_16X4 0
+#define ZH_LCD_16X2 1 /*!< LCD size 16x2. */
+#define ZH_LCD_16X4 0 /*!< LCD size 16x3. */
 
 #ifdef __cplusplus
 extern "C"
