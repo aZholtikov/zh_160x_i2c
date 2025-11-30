@@ -22,9 +22,9 @@ static const char *TAG = "zh_160x_i2c";
 
 #define LCD_160X_PULSE                       \
     zh_pcf8574_write_gpio(handle, 2, true);  \
-    esp_delay_us(300);                       \
+    esp_delay_us(500);                       \
     zh_pcf8574_write_gpio(handle, 2, false); \
-    esp_delay_us(400);
+    esp_delay_us(500);
 
 static void _zh_160x_lcd_init(zh_pcf8574_handle_t *handle);
 static void _zh_160x_send_command(zh_pcf8574_handle_t *handle, uint8_t command);
