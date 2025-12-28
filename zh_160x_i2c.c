@@ -46,7 +46,7 @@ esp_err_t zh_160x_lcd_clear(zh_pcf8574_handle_t *handle)
 esp_err_t zh_160x_set_cursor(zh_pcf8574_handle_t *handle, uint8_t row, uint8_t col)
 {
     ZH_LOGI("160X set cursor started.");
-    ZH_ERROR_CHECK(row < ((*(uint8_t *)handle->system == ZH_LCD_16X2) ? 2 : 4) && col < 16 && handle != NULL, ESP_ERR_INVALID_ARG, NULL, "160X set cursor failed. Invalid argument.");
+    ZH_ERROR_CHECK(handle != NULL && row < ((*(uint8_t *)handle->system == ZH_LCD_16X2) ? 2 : 4) && col < 16, ESP_ERR_INVALID_ARG, NULL, "160X set cursor failed. Invalid argument.");
     ZH_ERROR_CHECK(handle->is_initialized == true, ESP_ERR_INVALID_STATE, NULL, "160X set cursor failed. PCF8574 not initialized.");
     esp_err_t err = _zh_160x_send_command(handle, 0x80 | ((row == 0) ? col : (row == 1) ? (0x40 + col)
                                                                          : (row == 2)   ? (0x10 + col)
@@ -99,7 +99,7 @@ esp_err_t zh_160x_print_float(zh_pcf8574_handle_t *handle, float num, uint8_t pr
 esp_err_t zh_160x_print_progress_bar(zh_pcf8574_handle_t *handle, uint8_t row, uint8_t progress)
 {
     ZH_LOGI("160X print progress bar started.");
-    ZH_ERROR_CHECK(row < ((*(uint8_t *)handle->system == ZH_LCD_16X2) ? 2 : 4) && progress <= 100 && handle != NULL, ESP_ERR_INVALID_ARG, NULL, "160X print progress bar failed. Invalid argument.");
+    ZH_ERROR_CHECK(handle != NULL && row < ((*(uint8_t *)handle->system == ZH_LCD_16X2) ? 2 : 4) && progress <= 100, ESP_ERR_INVALID_ARG, NULL, "160X print progress bar failed. Invalid argument.");
     ZH_ERROR_CHECK(handle->is_initialized == true, ESP_ERR_INVALID_STATE, NULL, "160X print progress bar failed. PCF8574 not initialized.");
     uint8_t blocks = (progress * 16) / 100;
     esp_err_t err = zh_160x_set_cursor(handle, row, 0);
@@ -124,7 +124,7 @@ esp_err_t zh_160x_print_progress_bar(zh_pcf8574_handle_t *handle, uint8_t row, u
 esp_err_t zh_160x_clear_row(zh_pcf8574_handle_t *handle, uint8_t row)
 {
     ZH_LOGI("160X clear row started.");
-    ZH_ERROR_CHECK(row < ((*(uint8_t *)handle->system == ZH_LCD_16X2) ? 2 : 4) && handle != NULL, ESP_ERR_INVALID_ARG, NULL, "160X clear row failed. Invalid argument.");
+    ZH_ERROR_CHECK(handle != NULL && row < ((*(uint8_t *)handle->system == ZH_LCD_16X2) ? 2 : 4), ESP_ERR_INVALID_ARG, NULL, "160X clear row failed. Invalid argument.");
     ZH_ERROR_CHECK(handle->is_initialized == true, ESP_ERR_INVALID_STATE, NULL, "160X clear row failed. PCF8574 not initialized.");
     esp_err_t err = zh_160x_set_cursor(handle, row, 0);
     ZH_ERROR_CHECK(err == ESP_OK, err, NULL, "160X clear row failed. PCF8574 error.");
