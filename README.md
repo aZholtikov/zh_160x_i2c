@@ -54,48 +54,29 @@ One LCD on bus:
 
 #define I2C_PORT (I2C_NUM_MAX - 1)
 
-#ifndef CONFIG_IDF_TARGET_ESP8266
 i2c_master_bus_handle_t i2c_bus_handle = NULL;
-#endif
 
 zh_pcf8574_handle_t lcd_160x_handle = {0};
 
 void app_main(void)
 {
-    esp_log_level_set("zh_160x_i2c", ESP_LOG_ERROR); // For ESP8266 first enable "Component config -> Log output -> Enable log set level" via menuconfig.
-    esp_log_level_set("zh_pcf8574", ESP_LOG_ERROR);  // For ESP8266 first enable "Component config -> Log output -> Enable log set level" via menuconfig.
-    esp_log_level_set("zh_vector", ESP_LOG_ERROR);   // For ESP8266 first enable "Component config -> Log output -> Enable log set level" via menuconfig.
-#ifdef CONFIG_IDF_TARGET_ESP8266
-    i2c_config_t i2c_config = {
-        .mode = I2C_MODE_MASTER,
-        .sda_io_num = GPIO_NUM_4, // In accordance with used chip.
-        .sda_pullup_en = GPIO_PULLUP_ENABLE,
-        .scl_io_num = GPIO_NUM_5, // In accordance with used chip.
-        .scl_pullup_en = GPIO_PULLUP_ENABLE,
-    };
-    i2c_driver_install(I2C_PORT, i2c_config.mode);
-    i2c_param_config(I2C_PORT, &i2c_config);
-#else
+    esp_log_level_set("zh_160x_i2c", ESP_LOG_ERROR);
+    esp_log_level_set("zh_pcf8574", ESP_LOG_ERROR);
+    esp_log_level_set("zh_vector", ESP_LOG_ERROR);
     i2c_master_bus_config_t i2c_bus_config = {
         .clk_source = I2C_CLK_SRC_DEFAULT,
         .i2c_port = I2C_PORT,
-        .scl_io_num = GPIO_NUM_22, // In accordance with used chip.
-        .sda_io_num = GPIO_NUM_21, // In accordance with used chip.
+        .scl_io_num = GPIO_NUM_22,
+        .sda_io_num = GPIO_NUM_21,
         .glitch_ignore_cnt = 7,
         .flags.enable_internal_pullup = true,
     };
     i2c_new_master_bus(&i2c_bus_config, &i2c_bus_handle);
-#endif
-    zh_pcf8574_init_config_t pcf8574_init_config = ZH_PCF8574_INIT_CONFIG_DEFAULT();
-#ifdef CONFIG_IDF_TARGET_ESP8266
-    pcf8574_init_config.i2c_port = I2C_PORT;
-#else
-    pcf8574_init_config.i2c_handle = i2c_bus_handle;
-#endif
-    pcf8574_init_config.i2c_address = 0x27;
-    zh_pcf8574_init(&pcf8574_init_config, &lcd_160x_handle);
-    zh_160x_init(&lcd_160x_handle, ZH_LCD_16X2); // For LCD 16X2.
-    // zh_160x_init(&lcd_160x_handle, ZH_LCD_16X4); // For LCD 16X4.
+    zh_pcf8574_init_config_t config = ZH_PCF8574_INIT_CONFIG_DEFAULT();
+    config.i2c_handle = i2c_bus_handle;
+    config.i2c_address = 0x27;
+    zh_pcf8574_init(&config, &lcd_160x_handle);
+    zh_160x_init(&lcd_160x_handle, ZH_LCD_16X2);
     for (;;)
     {
         zh_160x_set_cursor(&lcd_160x_handle, 0, 0);
@@ -103,17 +84,14 @@ void app_main(void)
         zh_160x_set_cursor(&lcd_160x_handle, 1, 0);
         zh_160x_print_char(&lcd_160x_handle, "Hello World!");
         vTaskDelay(5000 / portTICK_PERIOD_MS);
-        zh_160x_set_cursor(&lcd_160x_handle, 0, 0); // For LCD 16X2.
-        // zh_160x_set_cursor(&lcd_160x_handle, 2, 0); // For LCD 16X4.
+        zh_160x_set_cursor(&lcd_160x_handle, 0, 0);
         zh_160x_print_char(&lcd_160x_handle, "Progress: ");
         for (uint8_t i = 0; i <= 100; ++i)
         {
-            zh_160x_set_cursor(&lcd_160x_handle, 0, 10); // For LCD 16X2.
-            // zh_160x_set_cursor(&lcd_160x_handle, 2, 10); // For LCD 16X4.
+            zh_160x_set_cursor(&lcd_160x_handle, 0, 10);
             zh_160x_print_int(&lcd_160x_handle, i);
             zh_160x_print_char(&lcd_160x_handle, "%");
-            zh_160x_print_progress_bar(&lcd_160x_handle, 1, i); // For LCD 16X2.
-            // zh_160x_print_progress_bar(&lcd_160x_handle, 3, i); // For LCD 16X4.
+            zh_160x_print_progress_bar(&lcd_160x_handle, 1, i);
             vTaskDelay(100 / portTICK_PERIOD_MS);
         }
         vTaskDelay(5000 / portTICK_PERIOD_MS);
