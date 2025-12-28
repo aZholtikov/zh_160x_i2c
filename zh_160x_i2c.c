@@ -14,17 +14,11 @@ static const char *TAG = "zh_160x_i2c";
         return err;                            \
     }
 
-#ifdef CONFIG_IDF_TARGET_ESP8266
-#define esp_delay_us(x) os_delay_us(x)
-#else
-#define esp_delay_us(x) esp_rom_delay_us(x)
-#endif
-
 #define LCD_160X_PULSE                       \
     zh_pcf8574_write_gpio(handle, 2, true);  \
-    esp_delay_us(500);                       \
+    esp_rom_delay_us(500);                   \
     zh_pcf8574_write_gpio(handle, 2, false); \
-    esp_delay_us(500);
+    esp_rom_delay_us(500);
 
 static void _zh_160x_lcd_init(zh_pcf8574_handle_t *handle);
 static void _zh_160x_send_command(zh_pcf8574_handle_t *handle, uint8_t command);

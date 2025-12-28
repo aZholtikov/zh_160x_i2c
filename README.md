@@ -1,9 +1,12 @@
-# ESP32 ESP-IDF and ESP8266 RTOS SDK component for liquid crystal display module 1602(4)A via I2C connection (PCF8574)
+# ESP32 ESP-IDF component for liquid crystal display module 1602(4)A via I2C connection (PCF8574(A))
 
 ## Tested on
 
-1. [ESP8266 RTOS_SDK v3.4](https://docs.espressif.com/projects/esp8266-rtos-sdk/en/latest/index.html#)
-2. [ESP32 ESP-IDF v5.4](https://docs.espressif.com/projects/esp-idf/en/release-v5.4/esp32/index.html)
+1. [ESP32 ESP-IDF v5.5.1](https://docs.espressif.com/projects/esp-idf/en/v5.5.1/esp32/index.html)
+
+## SAST Tools
+
+[PVS-Studio](https://pvs-studio.com/pvs-studio/?utm_source=website&utm_medium=github&utm_campaign=open_source) - static analyzer for C, C++, C#, and Java code.
 
 ## Features
 
@@ -59,9 +62,9 @@ zh_pcf8574_handle_t lcd_160x_handle = {0};
 
 void app_main(void)
 {
-    esp_log_level_set("zh_160x_i2c", ESP_LOG_NONE); // For ESP8266 first enable "Component config -> Log output -> Enable log set level" via menuconfig.
-    esp_log_level_set("zh_pcf8574", ESP_LOG_NONE);  // For ESP8266 first enable "Component config -> Log output -> Enable log set level" via menuconfig.
-    esp_log_level_set("zh_vector", ESP_LOG_NONE);   // For ESP8266 first enable "Component config -> Log output -> Enable log set level" via menuconfig.
+    esp_log_level_set("zh_160x_i2c", ESP_LOG_ERROR); // For ESP8266 first enable "Component config -> Log output -> Enable log set level" via menuconfig.
+    esp_log_level_set("zh_pcf8574", ESP_LOG_ERROR);  // For ESP8266 first enable "Component config -> Log output -> Enable log set level" via menuconfig.
+    esp_log_level_set("zh_vector", ESP_LOG_ERROR);   // For ESP8266 first enable "Component config -> Log output -> Enable log set level" via menuconfig.
 #ifdef CONFIG_IDF_TARGET_ESP8266
     i2c_config_t i2c_config = {
         .mode = I2C_MODE_MASTER,
