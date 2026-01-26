@@ -12,6 +12,18 @@
 
 1. Support of 16 LCD 160X on one bus.
 
+## Attention
+
+For correct operation, please enable the following settings in the menuconfig:
+
+```text
+CONFIG_FREERTOS_HZ=1000
+CONFIG_GPIO_CTRL_FUNC_IN_IRAM
+CONFIG_I2C_ISR_IRAM_SAFE
+CONFIG_I2C_MASTER_ISR_HANDLER_IN_IRAM
+CONFIG_I2C_ENABLE_SLAVE_DRIVER_VERSION_2
+```
+
 ## Connection
 
 | 1602(4)A | PCF8574 |
