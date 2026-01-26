@@ -65,8 +65,6 @@ One LCD on bus:
 
 #define I2C_PORT (I2C_NUM_MAX - 1)
 
-i2c_master_bus_handle_t i2c_bus_handle = NULL;
-
 zh_pcf8574_handle_t lcd_160x_handle = {0};
 
 void app_main(void)
@@ -82,6 +80,7 @@ void app_main(void)
         .glitch_ignore_cnt = 7,
         .flags.enable_internal_pullup = true,
     };
+    i2c_master_bus_handle_t i2c_bus_handle = NULL;
     i2c_new_master_bus(&i2c_bus_config, &i2c_bus_handle);
     zh_pcf8574_init_config_t config = ZH_PCF8574_INIT_CONFIG_DEFAULT();
     config.i2c_handle = i2c_bus_handle;
