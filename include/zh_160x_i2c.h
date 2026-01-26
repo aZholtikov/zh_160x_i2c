@@ -7,7 +7,7 @@
 #include "zh_pcf8574.h"
 
 #define ZH_LCD_16X2 1 /*!< LCD size 16x2. */
-#define ZH_LCD_16X4 0 /*!< LCD size 16x3. */
+#define ZH_LCD_16X4 0 /*!< LCD size 16x4. */
 
 #ifdef __cplusplus
 extern "C"
