@@ -96,6 +96,25 @@ extern "C"
      */
     esp_err_t zh_160x_clear_row(zh_pcf8574_handle_t *handle, uint8_t row);
 
+    /**
+     * @brief Enable the cursor.
+     *
+     * @param[in] handle Pointer to unique PCF8574 handle.
+     * @param[in] blink Blink mode.
+     *
+     * @return ESP_OK if success or an error code otherwise.
+     */
+    esp_err_t zh_160x_on_cursor(zh_pcf8574_handle_t *handle, bool blink);
+
+    /**
+     * @brief Disable the cursor.
+     *
+     * @param[in] handle Pointer to unique PCF8574 handle.
+     *
+     * @return ESP_OK if success or an error code otherwise.
+     */
+    esp_err_t zh_160x_off_cursor(zh_pcf8574_handle_t *handle);
+
 #ifdef __cplusplus
 }
 #endif

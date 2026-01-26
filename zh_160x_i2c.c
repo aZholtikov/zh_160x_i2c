@@ -139,6 +139,28 @@ esp_err_t zh_160x_clear_row(zh_pcf8574_handle_t *handle, uint8_t row)
     return ESP_OK;
 }
 
+esp_err_t zh_160x_on_cursor(zh_pcf8574_handle_t *handle, bool blink)
+{
+    ZH_LOGI("160X enable cursor started.");
+    ZH_ERROR_CHECK(handle != NULL, ESP_ERR_INVALID_ARG, NULL, "160X enable cursor failed. Invalid argument.");
+    ZH_ERROR_CHECK(handle->is_initialized == true, ESP_ERR_INVALID_STATE, NULL, "160X enable cursor failed. PCF8574 not initialized.");
+    esp_err_t err = _zh_160x_send_command(handle, (blink == true) ? 0x0f : 0x0e);
+    ZH_ERROR_CHECK(err == ESP_OK, err, NULL, "160X enable cursor failed. PCF8574 error.");
+    ZH_LOGI("160X enable cursor completed successfully.");
+    return ESP_OK;
+}
+
+esp_err_t zh_160x_off_cursor(zh_pcf8574_handle_t *handle)
+{
+    ZH_LOGI("160X disable cursor started.");
+    ZH_ERROR_CHECK(handle != NULL, ESP_ERR_INVALID_ARG, NULL, "160X disable cursor failed. Invalid argument.");
+    ZH_ERROR_CHECK(handle->is_initialized == true, ESP_ERR_INVALID_STATE, NULL, "160X disable cursor failed. PCF8574 not initialized.");
+    esp_err_t err = _zh_160x_send_command(handle, 0x0c);
+    ZH_ERROR_CHECK(err == ESP_OK, err, NULL, "160X disable cursor failed. PCF8574 error.");
+    ZH_LOGI("160X disable cursor completed successfully.");
+    return ESP_OK;
+}
+
 static esp_err_t _zh_160x_lcd_init(zh_pcf8574_handle_t *handle)
 {
     vTaskDelay(20 / portTICK_PERIOD_MS);
