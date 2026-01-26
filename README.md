@@ -90,11 +90,13 @@ void app_main(void)
     zh_160x_init(&lcd_160x_handle, ZH_LCD_16X2);
     for (;;)
     {
+        zh_160x_on_cursor(&lcd_160x_handle, true);
         zh_160x_set_cursor(&lcd_160x_handle, 0, 0);
         zh_160x_print_char(&lcd_160x_handle, "LCD 160X");
         zh_160x_set_cursor(&lcd_160x_handle, 1, 0);
         zh_160x_print_char(&lcd_160x_handle, "Hello World!");
         vTaskDelay(5000 / portTICK_PERIOD_MS);
+        zh_160x_off_cursor(&lcd_160x_handle);
         zh_160x_set_cursor(&lcd_160x_handle, 0, 0);
         zh_160x_print_char(&lcd_160x_handle, "Progress: ");
         for (uint8_t i = 0; i <= 100; ++i)
