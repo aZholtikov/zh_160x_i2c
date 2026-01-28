@@ -18,7 +18,7 @@ static esp_err_t _zh_160x_send_command(zh_pcf8574_handle_t *handle, uint8_t comm
 static esp_err_t _zh_160x_send_data(zh_pcf8574_handle_t *handle, uint8_t data);
 static esp_err_t _zh_160x_pulse(zh_pcf8574_handle_t *handle);
 
-esp_err_t zh_160x_init(zh_pcf8574_handle_t *handle, bool size)
+esp_err_t zh_160x_init(zh_pcf8574_handle_t *handle, bool size) // -V2008
 {
     ZH_LOGI("160X initialization started.");
     ZH_ERROR_CHECK(handle != NULL, ESP_ERR_INVALID_ARG, NULL, "160X initialization failed. Invalid argument.");
@@ -43,7 +43,7 @@ esp_err_t zh_160x_lcd_clear(zh_pcf8574_handle_t *handle)
     return ESP_OK;
 }
 
-esp_err_t zh_160x_set_cursor(zh_pcf8574_handle_t *handle, uint8_t row, uint8_t col)
+esp_err_t zh_160x_set_cursor(zh_pcf8574_handle_t *handle, uint8_t row, uint8_t col) // -V2008
 {
     ZH_LOGI("160X set cursor started.");
     ZH_ERROR_CHECK(handle != NULL && row < ((*(uint8_t *)handle->system == ZH_LCD_16X2) ? 2 : 4) && col < 16, ESP_ERR_INVALID_ARG, NULL, "160X set cursor failed. Invalid argument.");
@@ -96,7 +96,7 @@ esp_err_t zh_160x_print_float(zh_pcf8574_handle_t *handle, float num, uint8_t pr
     return ESP_OK;
 }
 
-esp_err_t zh_160x_print_progress_bar(zh_pcf8574_handle_t *handle, uint8_t row, uint8_t progress)
+esp_err_t zh_160x_print_progress_bar(zh_pcf8574_handle_t *handle, uint8_t row, uint8_t progress) // -V2008
 {
     ZH_LOGI("160X print progress bar started.");
     ZH_ERROR_CHECK(handle != NULL && row < ((*(uint8_t *)handle->system == ZH_LCD_16X2) ? 2 : 4) && progress <= 100, ESP_ERR_INVALID_ARG, NULL, "160X print progress bar failed. Invalid argument.");
@@ -121,7 +121,7 @@ esp_err_t zh_160x_print_progress_bar(zh_pcf8574_handle_t *handle, uint8_t row, u
     return ESP_OK;
 }
 
-esp_err_t zh_160x_clear_row(zh_pcf8574_handle_t *handle, uint8_t row)
+esp_err_t zh_160x_clear_row(zh_pcf8574_handle_t *handle, uint8_t row) // -V2008
 {
     ZH_LOGI("160X clear row started.");
     ZH_ERROR_CHECK(handle != NULL && row < ((*(uint8_t *)handle->system == ZH_LCD_16X2) ? 2 : 4), ESP_ERR_INVALID_ARG, NULL, "160X clear row failed. Invalid argument.");
@@ -161,7 +161,7 @@ esp_err_t zh_160x_off_cursor(zh_pcf8574_handle_t *handle)
     return ESP_OK;
 }
 
-static esp_err_t _zh_160x_lcd_init(zh_pcf8574_handle_t *handle)
+static esp_err_t _zh_160x_lcd_init(zh_pcf8574_handle_t *handle) // -V2008
 {
     vTaskDelay(20 / portTICK_PERIOD_MS);
     esp_err_t err = zh_pcf8574_write(handle, 0x30);
@@ -223,10 +223,10 @@ static esp_err_t _zh_160x_send_data(zh_pcf8574_handle_t *handle, uint8_t data)
 
 static esp_err_t _zh_160x_pulse(zh_pcf8574_handle_t *handle)
 {
-    esp_err_t err = zh_pcf8574_write_gpio(handle, 2, true);
+    esp_err_t err = zh_pcf8574_write_gpio(handle, ZH_PCF8574_GPIO_NUM_P2, ZH_PCF8574_GPIO_HIGH);
     ZH_ERROR_CHECK(err == ESP_OK, err, NULL, "PCF8574 error.");
     vTaskDelay(1 / portTICK_PERIOD_MS);
-    err = zh_pcf8574_write_gpio(handle, 2, false);
+    err = zh_pcf8574_write_gpio(handle, ZH_PCF8574_GPIO_NUM_P2, ZH_PCF8574_GPIO_LOW);
     ZH_ERROR_CHECK(err == ESP_OK, err, NULL, "PCF8574 error.");
     vTaskDelay(1 / portTICK_PERIOD_MS);
     return ESP_OK;
