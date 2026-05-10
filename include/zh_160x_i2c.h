@@ -60,7 +60,7 @@ extern "C"
      * @param[in] handle Pointer to unique PCF8574 handle.
      * @param[in] num The integer to be displayed.
      *
-     * @return ESP_OK if success or an error code otherwise..
+     * @return ESP_OK if success or an error code otherwise.
      */
     esp_err_t zh_160x_print_int(zh_pcf8574_handle_t *handle, int num);
 
