@@ -1,5 +1,9 @@
 # ESP32 ESP-IDF component for liquid crystal display module 1602(4)A via I2C connection (PCF8574(A))
 
+## Wiki
+
+[EN](WIKI_EN.md) | [RU](WIKI_RU.md)
+
 ## Tested on
 
 1. [ESP32 ESP-IDF v6.0.0](https://docs.espressif.com/projects/esp-idf/en/v6.0/esp32/index.html)
@@ -36,8 +40,7 @@ CONFIG_I2C_MASTER_ISR_HANDLER_IN_IRAM
 
 ## Dependencies
 
-1. [zh_vector](https://github.com/aZholtikov/zh_vector)
-2. [zh_pcf8574](https://github.com/aZholtikov/zh_pcf8574)
+1. [zh_pcf8574](https://github.com/aZholtikov/zh_pcf8574)
 
 ## Using
 
@@ -46,8 +49,6 @@ In an existing project, run the following command to install the components:
 ```text
 cd ../your_project/components
 git clone https://github.com/aZholtikov/zh_160x_i2c
-git clone https://github.com/aZholtikov/zh_pcf8574
-git clone https://github.com/aZholtikov/zh_vector
 ```
 
 In the application, add the component:
