@@ -1,0 +1,10 @@
+description: ESP32 ESP-IDF component for LCD 1602A/1604A displays via I2C using PCF8574(A) expanders
+url: https://github.com/aZholtikov/zh_160x_i2c
+version: "4.1.0"
+license: "Apache-2.0"
+maintainers:
+  - "Alexey Zholtikov <alexey.zholtikov@yandex.ru>"
+dependencies:
+  idf: ">=5.0"
+  zh_pcf8574:
+    git: "https://github.com/aZholtikov/zh_pcf8574.git"
