@@ -1,4 +1,4 @@
-# zh_160x_i2c - ESP32 ESP-IDF Component for LCD 1602A/1604A via I2C (PCF8574)
+# zh_160x_i2c - LCD 1602A/1604A via I2C (PCF8574) Component for ESP-IDF
 
 ## Table of Contents
 
@@ -25,39 +25,39 @@ The component is designed specifically for ESP32 microcontrollers and uses ESP-I
 
 ## Features
 
-1. **Simple API**: Easy-to-use functions for common LCD operations
-2. **I2C Interface**: Uses only 2 GPIO pins (SCL and SDA) via PCF8574 expander
-3. **Support for 1602A and 1604A**: Supports both 16x2 and 16x4 LCD modules
-4. **Multiple LCD Support**: Up to 8 LCD modules on one I2C bus (PCF8574) or 4 (PCF8574A)
-5. **Text Display**: Print strings, integers, and floating-point numbers
-6. **Cursor Control**: Enable/disable cursor with optional blink
-7. **Progress Bar**: Display progress bars on LCD
-8. **Row Operations**: Clear specific rows
-9. **ESP-IDF Optimized**: Uses ESP-IDF's I2C master driver and FreeRTOS
+1. **[Simple API]**: Easy-to-use functions for common LCD operations
+2. **[I2C Interface]**: Uses only 2 GPIO pins (SCL and SDA) via PCF8574 expander
+3. **[Support for 1602A and 1604A]**: Supports both 16x2 and 16x4 LCD modules
+4. **[Multiple LCD Support]**: Up to 16 LCD modules on one I2C bus
+5. **[Text Display]**: Print strings, integers, and floating-point numbers
+6. **[Cursor Control]**: Enable/disable cursor with optional blink
+7. **[Progress Bar]**: Display progress bars on LCD
+8. **[Row Operations]**: Clear specific rows
+9. **[ESP-IDF Optimized]**: Uses ESP-IDF's I2C master driver and FreeRTOS
 
 ---
 
 ## Installation
 
-1. Navigate to your project's components directory:
+Navigate to your project's components directory:
 
 ```bash
 cd ../your_project/components
 ```
 
-2. Clone the repository:
+Clone the repository:
 
 ```bash
 git clone https://github.com/aZholtikov/zh_160x_i2c
 ```
 
-3. In your application, include the header:
+In your application, include the header:
 
 ```c
 #include "zh_160x_i2c.h"
 ```
 
-4. The component will be automatically built with your project.
+The component will be automatically built with your project.
 
 ### Required menuconfig Settings
 
@@ -73,55 +73,97 @@ CONFIG_I2C_MASTER_ISR_HANDLER_IN_IRAM
 
 ## API Reference
 
-### Configuration Constants
+### Data Types
+
+#### zh_160x_i2c_handle_t
 
 ```c
-#define ZH_LCD_16X2 1  // LCD size 16x2
-#define ZH_LCD_16X4 0  // LCD size 16x4
+typedef struct _zh_160x_i2c_handle_t zh_160x_i2c_handle_t;
 ```
+
+Opaque handle for LCD 160x I2C display. Internal structure containing the PCF8574 expander handle and the current LCD size configuration.
+
+---
+
+#### zh_160x_i2c_lcd_size_t
+
+```c
+typedef enum
+{
+    ZH_LCD_16X2 = 0, /*!< LCD size 16x2 */
+    ZH_LCD_16X4,     /*!< LCD size 16x4 */
+    ZH_LCD_NUM_MAX
+} zh_160x_i2c_lcd_size_t;
+```
+
+Enumeration of supported LCD display sizes.
+
+| Value | Description |
+|-------|-------------|
+| `ZH_LCD_16X2` | LCD size 16x2 (2 rows of 16 characters) |
+| `ZH_LCD_16X4` | LCD size 16x4 (4 rows of 16 characters) |
 
 ---
 
 ### zh_160x_init()
 
-Initializes the LCD 160X module.
+Initializes the LCD 160x display.
+
+Allocates and configures the LCD handle, then sends the initialization sequence to the LCD controller via the PCF8574 I2C expander. Configures 4-bit mode and sets default display parameters.
 
 **Parameters:**
 
-- `handle` - Pointer to unique PCF8574 handle (must be already initialized)
+- `expander` - Pointer to the PCF8574 expander handle. Must not be NULL
+- `handle` - Output pointer for the newly allocated LCD handle. Must be NULL
 - `size` - LCD size (ZH_LCD_16X2 or ZH_LCD_16X4)
 
 **Returns:**
 
 - `ESP_OK` - Success
-- `ESP_ERR_INVALID_ARG` - Invalid argument (NULL handle or handle not initialized)
-- `ESP_FAIL` - Initialization failed
+- `ESP_ERR_INVALID_ARG` - Invalid argument (NULL pointer or invalid size)
+- `ESP_ERR_INVALID_STATE` - Handle already initialized
+- `ESP_ERR_NO_MEM` - Memory allocation failure
+- `ESP_FAIL` - LCD initialization sequence failure
 
 **Example:**
 
 ```c
-zh_pcf8574_handle_t lcd_handle = {0};
-// Initialize PCF8574 first
-zh_pcf8574_init(&config, &lcd_handle);
-// Then initialize LCD
-zh_160x_init(&lcd_handle, ZH_LCD_16X2);
+zh_pcf8574_handle_t *lcd_expander = NULL;
+zh_160x_i2c_handle_t *lcd_handle = NULL;
+zh_pcf8574_init_config_t config = ZH_PCF8574_INIT_CONFIG_DEFAULT();
+config.i2c_handle = i2c_bus_handle;
+config.i2c_address = 0x27;
+esp_err_t err = zh_pcf8574_init(&config, &lcd_expander);
+if (err != ESP_OK) {
+    // Error handling
+}
+err = zh_160x_init(&lcd_expander, &lcd_handle, ZH_LCD_16X2);
+if (err != ESP_OK) {
+    // Error handling
+}
 ```
+
+**Note:**
+
+The PCF8574 expander must be initialized before initializing the LCD.
 
 ---
 
 ### zh_160x_lcd_clear()
 
-Clears the entire LCD screen.
+Clears the LCD screen and moves the cursor to the home position.
+
+Sends the LCD clear command (0x01) to erase all displayed text and reset the cursor to the upper-left corner (row 0, column 0).
 
 **Parameters:**
 
-- `handle` - Pointer to unique PCF8574 handle
+- `handle` - Pointer to the LCD handle. Must not be NULL
 
 **Returns:**
 
 - `ESP_OK` - Success
 - `ESP_ERR_INVALID_ARG` - Invalid argument (NULL handle)
-- `ESP_FAIL` - Operation failed
+- `ESP_FAIL` - Command send failure
 
 ---
 
@@ -129,69 +171,84 @@ Clears the entire LCD screen.
 
 Sets the cursor to a specific position on the LCD.
 
+Moves the cursor to the specified row and column.
+For 16x2 displays: rows 0–1, columns 0–15.
+For 16x4 displays: rows 0–3, columns 0–15.
+
 **Parameters:**
 
-- `handle` - Pointer to unique PCF8574 handle
-- `row` - Row number (0-1 for 16x2, 0-3 for 16x4)
-- `col` - Column number (0-15)
+- `handle` - Pointer to the LCD handle. Must not be NULL
+- `row` - Row number (0–1 for 16x2, 0–3 for 16x4)
+- `col` - Column number (0–15)
 
 **Returns:**
 
 - `ESP_OK` - Success
-- `ESP_ERR_INVALID_ARG` - Invalid argument (NULL handle, invalid row/col)
-- `ESP_FAIL` - Operation failed
+- `ESP_ERR_INVALID_ARG` - Invalid argument (NULL handle or coordinates out of range)
+- `ESP_FAIL` - Command send failure
+
+**Note:**
+
+Row address mapping: row 0 = 0x00, row 1 = 0x40, row 2 = 0x10, row 3 = 0x50.
 
 ---
 
 ### zh_160x_print_char()
 
-Prints a string to the LCD.
+Prints a string to the LCD at the current cursor position.
+
+Transmits each character of the null-terminated string to the LCD in 4-bit mode. The cursor advances automatically after each character.
 
 **Parameters:**
 
-- `handle` - Pointer to unique PCF8574 handle
-- `str` - Pointer to the null-terminated string to display
+- `handle` - Pointer to the LCD handle. Must not be NULL
+- `str` - Pointer to the null-terminated string to display. Must not be NULL
 
 **Returns:**
 
 - `ESP_OK` - Success
 - `ESP_ERR_INVALID_ARG` - Invalid argument (NULL handle or str)
-- `ESP_FAIL` - Operation failed
+- `ESP_FAIL` - Character transmission failure
 
 ---
 
 ### zh_160x_print_int()
 
-Prints an integer to the LCD.
+Prints an integer to the LCD at the current cursor position.
+
+Converts the integer to a decimal string and displays it.
+Supports negative numbers (maximum 11 digits plus sign).
 
 **Parameters:**
 
-- `handle` - Pointer to unique PCF8574 handle
+- `handle` - Pointer to the LCD handle. Must not be NULL
 - `num` - Integer value to display
 
 **Returns:**
 
 - `ESP_OK` - Success
 - `ESP_ERR_INVALID_ARG` - Invalid argument (NULL handle)
-- `ESP_FAIL` - Operation failed
+- `ESP_FAIL` - String conversion or print failure
 
 ---
 
 ### zh_160x_print_float()
 
-Prints a floating-point number to the LCD.
+Prints a floating-point number to the LCD at the current cursor position.
+
+Converts the floating-point value to a string with the specified decimal precision and displays it.
 
 **Parameters:**
 
-- `handle` - Pointer to unique PCF8574 handle
+- `handle` - Pointer to the LCD handle. Must not be NULL
 - `num` - Floating-point value to display
-- `precision` - Number of decimal places (0-9)
+- `precision` - Number of decimal places (0–6 recommended)
 
 **Returns:**
 
 - `ESP_OK` - Success
 - `ESP_ERR_INVALID_ARG` - Invalid argument (NULL handle)
-- `ESP_FAIL` - Operation failed
+- `ESP_FAIL` - String conversion or print failure
 
 ---
 
@@ -199,17 +256,20 @@ Prints a floating-point number to the LCD.
 
 Displays a progress bar on a specific row of the LCD.
 
+Renders a 16-block progress bar using a custom character (0xFF).
+Filled blocks represent the progress percentage, empty blocks show the remainder.
+
 **Parameters:**
 
-- `handle` - Pointer to unique PCF8574 handle
-- `row` - Row number (0-1 for 16x2, 0-3 for 16x4)
-- `progress` - Progress percentage (0-100)
+- `handle` - Pointer to the LCD handle. Must not be NULL
+- `row` - Row number (0–1 for 16x2, 0–3 for 16x4)
+- `progress` - Progress percentage (0–100)
 
 **Returns:**
 
 - `ESP_OK` - Success
-- `ESP_ERR_INVALID_ARG` - Invalid argument (NULL handle, invalid row or progress)
-- `ESP_FAIL` - Operation failed
+- `ESP_ERR_INVALID_ARG` - Invalid argument (NULL handle, row out of range, or progress > 100)
+- `ESP_FAIL` - Cursor positioning or character print failure
 
 ---
 
@@ -217,16 +277,19 @@ Displays a progress bar on a specific row of the LCD.
 
 Clears a specific row on the LCD.
 
+Moves the cursor to the beginning of the specified row and fills all 16 positions with spaces to erase existing content.
+The cursor remains at the start of the cleared row.
+
 **Parameters:**
 
-- `handle` - Pointer to unique PCF8574 handle
-- `row` - Row number (0-1 for 16x2, 0-3 for 16x4)
+- `handle` - Pointer to the LCD handle. Must not be NULL
+- `row` - Row number (0–1 for 16x2, 0–3 for 16x4)
 
 **Returns:**
 
 - `ESP_OK` - Success
-- `ESP_ERR_INVALID_ARG` - Invalid argument (NULL handle, invalid row)
-- `ESP_FAIL` - Operation failed
+- `ESP_ERR_INVALID_ARG` - Invalid argument (NULL handle or row out of range)
+- `ESP_FAIL` - Cursor positioning or character print failure
 
 ---
 
@@ -234,32 +297,37 @@ Clears a specific row on the LCD.
 
 Enables the cursor with optional blink mode.
 
+Turns on the cursor and optionally enables blinking.
+Command 0x0F enables cursor with blink, 0x0E enables cursor only.
+
 **Parameters:**
 
-- `handle` - Pointer to unique PCF8574 handle
-- `blink` - If true, cursor blinks; if false, cursor is steady
+- `handle` - Pointer to the LCD handle. Must not be NULL
+- `blink` - If true, enables blinking cursor; if false, solid cursor
 
 **Returns:**
 
 - `ESP_OK` - Success
 - `ESP_ERR_INVALID_ARG` - Invalid argument (NULL handle)
-- `ESP_FAIL` - Operation failed
+- `ESP_FAIL` - Command send failure
 
 ---
 
 ### zh_160x_off_cursor()
 
-Disables the cursor.
+Hides the cursor and disables blinking.
+
+Sends command 0x0C to turn off both cursor and cursor blink.
 
 **Parameters:**
 
-- `handle` - Pointer to unique PCF8574 handle
+- `handle` - Pointer to the LCD handle (not NULL)
 
 **Returns:**
 
 - `ESP_OK` - Success
 - `ESP_ERR_INVALID_ARG` - Invalid argument (NULL handle)
-- `ESP_FAIL` - Operation failed
+- `ESP_FAIL` - Command send failure
 
 ---
 
@@ -272,7 +340,8 @@ Disables the cursor.
 
 #define I2C_PORT (I2C_NUM_MAX - 1)
 
-zh_pcf8574_handle_t lcd_160x_handle = {0};
+zh_pcf8574_handle_t *lcd_expander = NULL;
+zh_160x_i2c_handle_t *lcd_handle = NULL;
 
 void app_main(void)
 {
@@ -287,19 +356,26 @@ void app_main(void)
         .glitch_ignore_cnt = 7,
         .flags.enable_internal_pullup = true,
     };
-    
     i2c_master_bus_handle_t i2c_bus_handle = NULL;
     i2c_new_master_bus(&i2c_bus_config, &i2c_bus_handle);
     zh_pcf8574_init_config_t config = ZH_PCF8574_INIT_CONFIG_DEFAULT();
     config.i2c_handle = i2c_bus_handle;
     config.i2c_address = 0x27;
-    zh_pcf8574_init(&config, &lcd_160x_handle);
-    zh_160x_init(&lcd_160x_handle, ZH_LCD_16X2);
+    esp_err_t err = zh_pcf8574_init(&config, &lcd_expander);
+    if (err != ESP_OK) {
+        return;
+    }
+    err = zh_160x_init(&lcd_expander, &lcd_handle, ZH_LCD_16X2);
+    if (err != ESP_OK) {
+        return;
+    }
     // Display text
-    zh_160x_set_cursor(&lcd_160x_handle, 0, 0);
-    zh_160x_print_char(&lcd_160x_handle, "LCD 160X");
-    zh_160x_set_cursor(&lcd_160x_handle, 1, 0);
-    zh_160x_print_char(&lcd_160x_handle, "Hello World!");
+    zh_160x_set_cursor(&lcd_handle, 0, 0);
+    zh_160x_print_char(&lcd_handle, "LCD 160X");
+    zh_160x_set_cursor(&lcd_handle, 1, 0);
+    zh_160x_print_char(&lcd_handle, "Hello World!");
+    // Cleanup
+    zh_160x_deinit(&lcd_handle);
 }
 ```
 
@@ -308,9 +384,13 @@ void app_main(void)
 ```c
 #include "zh_160x_i2c.h"
 
+#define I2C_PORT (I2C_NUM_MAX - 1)
+
+zh_pcf8574_handle_t *lcd_expander = NULL;
+zh_160x_i2c_handle_t *lcd_handle = NULL;
+
 void app_main(void)
 {
-    zh_pcf8574_handle_t lcd_handle = {0};
     // ... initialization code ...
     for (uint8_t i = 0; i <= 100; ++i)
     {
@@ -320,6 +400,8 @@ void app_main(void)
         zh_160x_print_progress_bar(&lcd_handle, 1, i);
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
+    // Cleanup
+    zh_160x_deinit(&lcd_handle);
 }
 ```
 
@@ -328,9 +410,13 @@ void app_main(void)
 ```c
 #include "zh_160x_i2c.h"
 
+#define I2C_PORT (I2C_NUM_MAX - 1)
+
+zh_pcf8574_handle_t *lcd_expander = NULL;
+zh_160x_i2c_handle_t *lcd_handle = NULL;
+
 void app_main(void)
 {
-    zh_pcf8574_handle_t lcd_handle = {0};
     // ... initialization code ...
     // Display string
     zh_160x_set_cursor(&lcd_handle, 0, 0);
@@ -347,6 +433,8 @@ void app_main(void)
     vTaskDelay(2000 / portTICK_PERIOD_MS);
     // Disable cursor
     zh_160x_off_cursor(&lcd_handle);
+    // Cleanup
+    zh_160x_deinit(&lcd_handle);
 }
 ```
 
@@ -357,8 +445,10 @@ void app_main(void)
 
 #define I2C_PORT (I2C_NUM_MAX - 1)
 
-zh_pcf8574_handle_t lcd1_handle = {0};
-zh_pcf8574_handle_t lcd2_handle = {0};
+zh_pcf8574_handle_t *lcd1_expander = NULL;
+zh_160x_i2c_handle_t *lcd1_handle = NULL;
+zh_pcf8574_handle_t *lcd2_expander = NULL;
+zh_160x_i2c_handle_t *lcd2_handle = NULL;
 
 void app_main(void)
 {
@@ -379,18 +469,21 @@ void app_main(void)
     zh_pcf8574_init_config_t config = ZH_PCF8574_INIT_CONFIG_DEFAULT();
     config.i2c_handle = i2c_bus_handle;
     config.i2c_address = 0x27;
-    zh_pcf8574_init(&config, &lcd1_handle);
-    zh_160x_init(&lcd1_handle, ZH_LCD_16X2);
+    zh_pcf8574_init(&config, &lcd1_expander);
+    zh_160x_init(&lcd1_expander, &lcd1_handle, ZH_LCD_16X2);
     // Initialize second LCD at address 0x26
     config.i2c_address = 0x26;
-    zh_pcf8574_init(&config, &lcd2_handle);
-    zh_160x_init(&lcd2_handle, ZH_LCD_16X2);
+    zh_pcf8574_init(&config, &lcd2_expander);
+    zh_160x_init(&lcd2_expander, &lcd2_handle, ZH_LCD_16X2);
     // Display on first LCD
     zh_160x_set_cursor(&lcd1_handle, 0, 0);
     zh_160x_print_char(&lcd1_handle, "LCD 1");
     // Display on second LCD
     zh_160x_set_cursor(&lcd2_handle, 0, 0);
     zh_160x_print_char(&lcd2_handle, "LCD 2");
+    // Cleanup
+    zh_160x_deinit(&lcd1_handle);
+    zh_160x_deinit(&lcd2_handle);
 }
 ```
 
@@ -399,14 +492,14 @@ void app_main(void)
 ## Technical Specifications
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **LCD Types** | 1602A (16x2), 1604A (16x4) |
 | **Interface** | I2C via PCF8574(A) |
 | **I2C Address Range** | 0x20-0x27 (PCF8574), 0x38-0x3F (PCF8574A) |
 | **Max LCDs per Bus** | 16 |
 | **GPIO Usage** | 2 (SCL, SDA) |
-| **ESP-IDF Version** | >= 5.0|
-| **Platform** | ESP32 family |
+| **ESP-IDF Version** | >= 5.0 |
+| **Platform** | ESP32 series |
 | **Language** | C (C99) |
 
 ---
@@ -414,7 +507,7 @@ void app_main(void)
 ## Error Codes
 
 | Error Code | Description |
-|------------|-------------|
+| ------------ | ------------- |
 | `ESP_OK` | Operation completed successfully |
 | `ESP_ERR_INVALID_ARG` | Invalid argument (NULL pointer or invalid value) |
 | `ESP_ERR_INVALID_STATE` | Handle not initialized |
@@ -498,3 +591,7 @@ limitations under the License.
   - Always initialize PCF8574 before initializing LCD
   - Check I2C address using a scanner if LCD does not respond
   - Consider I2C bus speed limitations when using multiple devices
+
+---
+
+*Generated for zh_160x_i2c v5.0.0*

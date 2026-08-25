@@ -13,65 +13,135 @@ static const char *TAG = "zh_160x_i2c";
         return err;                                  \
     }
 
-static esp_err_t _zh_160x_lcd_init(zh_pcf8574_handle_t *handle);
-static esp_err_t _zh_160x_send_command(zh_pcf8574_handle_t *handle, uint8_t command);
-static esp_err_t _zh_160x_send_data(zh_pcf8574_handle_t *handle, uint8_t data);
-static esp_err_t _zh_160x_pulse(zh_pcf8574_handle_t *handle);
+/**
+ * @brief LCD 160x I2C handle structure.
+ *
+ * Internal handle containing the PCF8574 expander pointer and
+ * the configured LCD size for row address calculations.
+ */
+struct _zh_160x_i2c_handle_t
+{
+    zh_pcf8574_handle_t *zh_pcf8574_handle;      /*!< PCF8574 expander handle */
+    zh_160x_i2c_lcd_size_t zh_160x_i2c_lcd_size; /*!< Configured LCD size (16x2 or 16x4) */
+};
 
-esp_err_t zh_160x_init(zh_pcf8574_handle_t *handle, bool size) // -V2008
+/**
+ * @brief Initialize the LCD 160x display.
+ *
+ * Sends initialization sequence to the LCD controller via PCF8574 expander.
+ * Configures 4-bit mode and sets default display parameters.
+ * Follows HD44780 initialization protocol with function set commands.
+ *
+ * @param handle Pointer to the 160x I2C handle
+ *
+ * @return ESP_OK on success
+ * @return ESP_FAIL if error
+ */
+static esp_err_t _zh_160x_lcd_init(zh_160x_i2c_handle_t *handle);
+
+/**
+ * @brief Send a command to the LCD.
+ *
+ * Transmits a command byte to the LCD in 4-bit mode.
+ * RS pin is set to low (0x08) to indicate command mode.
+ *
+ * @param handle Pointer to the 160x I2C handle
+ * @param command Command byte to send
+ *
+ * @return ESP_OK on success
+ * @return ESP_FAIL if error
+ */
+static esp_err_t _zh_160x_send_command(zh_160x_i2c_handle_t *handle, uint8_t command);
+
+/**
+ * @brief Send data to the LCD.
+ *
+ * Transmits a data byte to the LCD in 4-bit mode.
+ * RS pin is set to high (0x09) to indicate data mode.
+ *
+ * @param handle Pointer to the 160x I2C handle
+ * @param data Data byte to send
+ *
+ * @return ESP_OK on success
+ * @return ESP_FAIL if error
+ */
+static esp_err_t _zh_160x_send_data(zh_160x_i2c_handle_t *handle, uint8_t data);
+
+/**
+ * @brief Generate an Enable pulse for the LCD.
+ *
+ * Toggles the E pin (GPIO2 on PCF8574) to latch data into the LCD.
+ * Sets E high, delays 1ms, then sets E low with another 1ms delay.
+ * This pulse signals the LCD to process the data on the D4-D7 pins.
+ *
+ * @param handle Pointer to the 160x I2C handle
+ *
+ * @return ESP_OK on success
+ * @return ESP_FAIL if error
+ */
+static esp_err_t _zh_160x_pulse(zh_160x_i2c_handle_t *handle);
+
+esp_err_t zh_160x_init(zh_pcf8574_handle_t **expander, zh_160x_i2c_handle_t **handle, zh_160x_i2c_lcd_size_t size) // -V2008
 {
     ZH_LOGI("160X initialization started.");
-    ZH_ERROR_CHECK(handle != NULL, ESP_ERR_INVALID_ARG, NULL, "160X initialization failed. Invalid argument.");
-    ZH_ERROR_CHECK(handle->is_initialized == true, ESP_ERR_INVALID_STATE, NULL, "160X initialization failed. PCF8574 not initialized.");
-    handle->system = heap_caps_calloc(1, sizeof(uint8_t), MALLOC_CAP_8BIT);
-    ZH_ERROR_CHECK(handle->system != NULL, ESP_ERR_INVALID_ARG, NULL, "160X initialization failed. Memory allocation fail.");
-    *(uint8_t *)handle->system = size;
-    ZH_ERROR_CHECK(_zh_160x_lcd_init(handle) == ESP_OK, ESP_FAIL, NULL, "160X initialization failed. PCF8574 error.");
+    ZH_ERROR_CHECK(handle != NULL && expander != NULL && *expander != NULL && size < ZH_LCD_NUM_MAX, ESP_ERR_INVALID_ARG, NULL, "160X initialization failed. Invalid argument.");
+    ZH_ERROR_CHECK(*handle == NULL, ESP_ERR_INVALID_STATE, NULL, "160X initialization failed. 160X is already initialized.");
+    *handle = heap_caps_calloc(1, sizeof(zh_160x_i2c_handle_t), MALLOC_CAP_8BIT);
+    ZH_ERROR_CHECK(*handle != NULL, ESP_ERR_NO_MEM, NULL, "160X initialization failed. Failed to allocate 160X handle.");
+    (*handle)->zh_pcf8574_handle = *expander;
+    (*handle)->zh_160x_i2c_lcd_size = size;
+    ZH_ERROR_CHECK(_zh_160x_lcd_init(*handle) == ESP_OK, ESP_FAIL, NULL, "160X initialization failed. PCF8574 error.");
     ZH_LOGI("160X initialization completed successfully.");
     return ESP_OK;
 }
 
-esp_err_t zh_160x_lcd_clear(zh_pcf8574_handle_t *handle)
+esp_err_t zh_160x_deinit(zh_160x_i2c_handle_t **handle)
+{
+    ZH_LOGI("160X deinitialization started.");
+    ZH_ERROR_CHECK(handle != NULL && *handle != NULL, ESP_ERR_INVALID_ARG, NULL, "160X deinitialization failed. Invalid argument.");
+    heap_caps_free(*handle);
+    *handle = NULL;
+    ZH_LOGI("160X deinitialization completed successfully.");
+    return ESP_OK;
+}
+
+esp_err_t zh_160x_lcd_clear(zh_160x_i2c_handle_t **handle)
 {
     ZH_LOGI("160X display cleaning started.");
-    ZH_ERROR_CHECK(handle != NULL, ESP_ERR_INVALID_ARG, NULL, "160X display cleaning failed. Invalid argument.");
-    ZH_ERROR_CHECK(handle->is_initialized == true, ESP_ERR_INVALID_STATE, NULL, "160X display cleaning failed. PCF8574 not initialized.");
-    ZH_ERROR_CHECK(_zh_160x_send_command(handle, 0x01) == ESP_OK, ESP_FAIL, NULL, "160X display cleaning failed. PCF8574 error.");
+    ZH_ERROR_CHECK(handle != NULL && *handle != NULL, ESP_ERR_INVALID_ARG, NULL, "160X display cleaning failed. Invalid argument.");
+    ZH_ERROR_CHECK(_zh_160x_send_command(*handle, 0x01) == ESP_OK, ESP_FAIL, NULL, "160X display cleaning failed. PCF8574 error.");
     ZH_LOGI("160X display cleaning completed successfully.");
     return ESP_OK;
 }
 
-esp_err_t zh_160x_set_cursor(zh_pcf8574_handle_t *handle, uint8_t row, uint8_t col) // -V2008
+esp_err_t zh_160x_set_cursor(zh_160x_i2c_handle_t **handle, uint8_t row, uint8_t col) // -V2008
 {
     ZH_LOGI("160X set cursor started.");
-    ZH_ERROR_CHECK(handle != NULL && row < ((*(uint8_t *)handle->system == ZH_LCD_16X2) ? 2 : 4) && col < 16, ESP_ERR_INVALID_ARG, NULL, "160X set cursor failed. Invalid argument.");
-    ZH_ERROR_CHECK(handle->is_initialized == true, ESP_ERR_INVALID_STATE, NULL, "160X set cursor failed. PCF8574 not initialized.");
-    ZH_ERROR_CHECK(_zh_160x_send_command(handle, 0x80 | ((row == 0) ? col : (row == 1) ? (0x40 + col)
-                                                                        : (row == 2)   ? (0x10 + col)
-                                                                                       : (0x50 + col))) == ESP_OK,
+    ZH_ERROR_CHECK(handle != NULL && *handle != NULL && row < (((*handle)->zh_160x_i2c_lcd_size == ZH_LCD_16X2) ? 2 : 4) && col < 16, ESP_ERR_INVALID_ARG, NULL, "160X set cursor failed. Invalid argument.");
+    // clang-format off
+    ZH_ERROR_CHECK(_zh_160x_send_command(*handle, 0x80 | ((row == 0) ? col : (row == 1) ? (0x40 + col) : (row == 2) ? (0x10 + col) : (0x50 + col))) == ESP_OK,
                    ESP_FAIL, NULL, "160X set cursor failed. PCF8574 error.");
+    // clang-format on
     ZH_LOGI("160X set cursor completed successfully.");
     return ESP_OK;
 }
 
-esp_err_t zh_160x_print_char(zh_pcf8574_handle_t *handle, const char *str)
+esp_err_t zh_160x_print_char(zh_160x_i2c_handle_t **handle, const char *str)
 {
     ZH_LOGI("160X print char started.");
-    ZH_ERROR_CHECK(str != NULL && handle != NULL, ESP_ERR_INVALID_ARG, NULL, "160X print char failed. Invalid argument.");
-    ZH_ERROR_CHECK(handle->is_initialized == true, ESP_ERR_INVALID_STATE, NULL, "160X print char failed. PCF8574 not initialized.");
+    ZH_ERROR_CHECK(str != NULL && handle != NULL && *handle != NULL, ESP_ERR_INVALID_ARG, NULL, "160X print char failed. Invalid argument.");
     while (*str != 0)
     {
-        ZH_ERROR_CHECK(_zh_160x_send_data(handle, (uint8_t)*str++) == ESP_OK, ESP_FAIL, NULL, "160X print char failed. PCF8574 error.");
+        ZH_ERROR_CHECK(_zh_160x_send_data(*handle, (uint8_t)*str++) == ESP_OK, ESP_FAIL, NULL, "160X print char failed. PCF8574 error.");
     }
     ZH_LOGI("160X print char completed successfully.");
     return ESP_OK;
 }
 
-esp_err_t zh_160x_print_int(zh_pcf8574_handle_t *handle, int num)
+esp_err_t zh_160x_print_int(zh_160x_i2c_handle_t **handle, int num)
 {
     ZH_LOGI("160X print int started.");
-    ZH_ERROR_CHECK(handle != NULL, ESP_ERR_INVALID_ARG, NULL, "160X print int failed. Invalid argument.");
-    ZH_ERROR_CHECK(handle->is_initialized == true, ESP_ERR_INVALID_STATE, NULL, "160X print int failed. PCF8574 not initialized.");
+    ZH_ERROR_CHECK(handle != NULL && *handle != NULL, ESP_ERR_INVALID_ARG, NULL, "160X print int failed. Invalid argument.");
     char buffer[12];
     sprintf(buffer, "%d", num);
     ZH_ERROR_CHECK(zh_160x_print_char(handle, buffer) == ESP_OK, ESP_FAIL, NULL, "160X print int failed. PCF8574 error.");
@@ -79,11 +149,10 @@ esp_err_t zh_160x_print_int(zh_pcf8574_handle_t *handle, int num)
     return ESP_OK;
 }
 
-esp_err_t zh_160x_print_float(zh_pcf8574_handle_t *handle, float num, uint8_t precision)
+esp_err_t zh_160x_print_float(zh_160x_i2c_handle_t **handle, float num, uint8_t precision)
 {
     ZH_LOGI("160X print float started.");
-    ZH_ERROR_CHECK(handle != NULL, ESP_ERR_INVALID_ARG, NULL, "160X print float failed. Invalid argument.");
-    ZH_ERROR_CHECK(handle->is_initialized == true, ESP_ERR_INVALID_STATE, NULL, "160X print float failed. PCF8574 not initialized.");
+    ZH_ERROR_CHECK(handle != NULL && *handle != NULL, ESP_ERR_INVALID_ARG, NULL, "160X print float failed. Invalid argument.");
     char buffer[16];
     sprintf(buffer, "%.*f", precision, num);
     ZH_ERROR_CHECK(zh_160x_print_char(handle, buffer) == ESP_OK, ESP_FAIL, NULL, "160X print float failed. PCF8574 error.");
@@ -91,11 +160,10 @@ esp_err_t zh_160x_print_float(zh_pcf8574_handle_t *handle, float num, uint8_t pr
     return ESP_OK;
 }
 
-esp_err_t zh_160x_print_progress_bar(zh_pcf8574_handle_t *handle, uint8_t row, uint8_t progress) // -V2008
+esp_err_t zh_160x_print_progress_bar(zh_160x_i2c_handle_t **handle, uint8_t row, uint8_t progress) // -V2008
 {
     ZH_LOGI("160X print progress bar started.");
-    ZH_ERROR_CHECK(handle != NULL && row < ((*(uint8_t *)handle->system == ZH_LCD_16X2) ? 2 : 4) && progress <= 100, ESP_ERR_INVALID_ARG, NULL, "160X print progress bar failed. Invalid argument.");
-    ZH_ERROR_CHECK(handle->is_initialized == true, ESP_ERR_INVALID_STATE, NULL, "160X print progress bar failed. PCF8574 not initialized.");
+    ZH_ERROR_CHECK(handle != NULL && *handle != NULL && row < (((*handle)->zh_160x_i2c_lcd_size == ZH_LCD_16X2) ? 2 : 4) && progress <= 100, ESP_ERR_INVALID_ARG, NULL, "160X print progress bar failed. Invalid argument.");
     uint8_t blocks = (progress * 16) / 100;
     ZH_ERROR_CHECK(zh_160x_set_cursor(handle, row, 0) == ESP_OK, ESP_FAIL, NULL, "160X print progress bar failed. PCF8574 error.");
     for (uint8_t i = 0; i < 16; ++i)
@@ -113,11 +181,10 @@ esp_err_t zh_160x_print_progress_bar(zh_pcf8574_handle_t *handle, uint8_t row, u
     return ESP_OK;
 }
 
-esp_err_t zh_160x_clear_row(zh_pcf8574_handle_t *handle, uint8_t row) // -V2008
+esp_err_t zh_160x_clear_row(zh_160x_i2c_handle_t **handle, uint8_t row) // -V2008
 {
     ZH_LOGI("160X clear row started.");
-    ZH_ERROR_CHECK(handle != NULL && row < ((*(uint8_t *)handle->system == ZH_LCD_16X2) ? 2 : 4), ESP_ERR_INVALID_ARG, NULL, "160X clear row failed. Invalid argument.");
-    ZH_ERROR_CHECK(handle->is_initialized == true, ESP_ERR_INVALID_STATE, NULL, "160X clear row failed. PCF8574 not initialized.");
+    ZH_ERROR_CHECK(handle != NULL && *handle != NULL && row < (((*handle)->zh_160x_i2c_lcd_size == ZH_LCD_16X2) ? 2 : 4), ESP_ERR_INVALID_ARG, NULL, "160X clear row failed. Invalid argument.");
     ZH_ERROR_CHECK(zh_160x_set_cursor(handle, row, 0) == ESP_OK, ESP_FAIL, NULL, "160X clear row failed. PCF8574 error.");
     for (uint8_t i = 0; i < 16; ++i)
     {
@@ -128,36 +195,34 @@ esp_err_t zh_160x_clear_row(zh_pcf8574_handle_t *handle, uint8_t row) // -V2008
     return ESP_OK;
 }
 
-esp_err_t zh_160x_on_cursor(zh_pcf8574_handle_t *handle, bool blink)
+esp_err_t zh_160x_on_cursor(zh_160x_i2c_handle_t **handle, bool blink)
 {
     ZH_LOGI("160X enable cursor started.");
-    ZH_ERROR_CHECK(handle != NULL, ESP_ERR_INVALID_ARG, NULL, "160X enable cursor failed. Invalid argument.");
-    ZH_ERROR_CHECK(handle->is_initialized == true, ESP_ERR_INVALID_STATE, NULL, "160X enable cursor failed. PCF8574 not initialized.");
-    ZH_ERROR_CHECK(_zh_160x_send_command(handle, (blink == true) ? 0x0f : 0x0e) == ESP_OK, ESP_FAIL, NULL, "160X enable cursor failed. PCF8574 error.");
+    ZH_ERROR_CHECK(handle != NULL && *handle != NULL, ESP_ERR_INVALID_ARG, NULL, "160X enable cursor failed. Invalid argument.");
+    ZH_ERROR_CHECK(_zh_160x_send_command(*handle, (blink == true) ? 0x0f : 0x0e) == ESP_OK, ESP_FAIL, NULL, "160X enable cursor failed. PCF8574 error.");
     ZH_LOGI("160X enable cursor completed successfully.");
     return ESP_OK;
 }
 
-esp_err_t zh_160x_off_cursor(zh_pcf8574_handle_t *handle)
+esp_err_t zh_160x_off_cursor(zh_160x_i2c_handle_t **handle)
 {
     ZH_LOGI("160X disable cursor started.");
-    ZH_ERROR_CHECK(handle != NULL, ESP_ERR_INVALID_ARG, NULL, "160X disable cursor failed. Invalid argument.");
-    ZH_ERROR_CHECK(handle->is_initialized == true, ESP_ERR_INVALID_STATE, NULL, "160X disable cursor failed. PCF8574 not initialized.");
-    ZH_ERROR_CHECK(_zh_160x_send_command(handle, 0x0c) == ESP_OK, ESP_FAIL, NULL, "160X disable cursor failed. PCF8574 error.");
+    ZH_ERROR_CHECK(handle != NULL && *handle != NULL, ESP_ERR_INVALID_ARG, NULL, "160X disable cursor failed. Invalid argument.");
+    ZH_ERROR_CHECK(_zh_160x_send_command(*handle, 0x0c) == ESP_OK, ESP_FAIL, NULL, "160X disable cursor failed. PCF8574 error.");
     ZH_LOGI("160X disable cursor completed successfully.");
     return ESP_OK;
 }
 
-static esp_err_t _zh_160x_lcd_init(zh_pcf8574_handle_t *handle) // -V2008
+static esp_err_t _zh_160x_lcd_init(zh_160x_i2c_handle_t *handle) // -V2008
 {
     vTaskDelay(20 / portTICK_PERIOD_MS);
-    ZH_ERROR_CHECK(zh_pcf8574_write(handle, 0x30) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
+    ZH_ERROR_CHECK(zh_pcf8574_write(&handle->zh_pcf8574_handle, 0x30) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error."); // -V525
     ZH_ERROR_CHECK(_zh_160x_pulse(handle) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
-    ZH_ERROR_CHECK(zh_pcf8574_write(handle, 0x30) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
+    ZH_ERROR_CHECK(zh_pcf8574_write(&handle->zh_pcf8574_handle, 0x30) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error."); // -V525
     ZH_ERROR_CHECK(_zh_160x_pulse(handle) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
-    ZH_ERROR_CHECK(zh_pcf8574_write(handle, 0x30) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
+    ZH_ERROR_CHECK(zh_pcf8574_write(&handle->zh_pcf8574_handle, 0x30) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error."); // -V525
     ZH_ERROR_CHECK(_zh_160x_pulse(handle) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
-    ZH_ERROR_CHECK(zh_pcf8574_write(handle, 0x20) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
+    ZH_ERROR_CHECK(zh_pcf8574_write(&handle->zh_pcf8574_handle, 0x20) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error."); // -V525
     ZH_ERROR_CHECK(_zh_160x_pulse(handle) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
     ZH_ERROR_CHECK(_zh_160x_send_command(handle, 0x28) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
     ZH_ERROR_CHECK(_zh_160x_send_command(handle, 0x28) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
@@ -168,29 +233,29 @@ static esp_err_t _zh_160x_lcd_init(zh_pcf8574_handle_t *handle) // -V2008
     return ESP_OK;
 }
 
-static esp_err_t _zh_160x_send_command(zh_pcf8574_handle_t *handle, uint8_t command)
+static esp_err_t _zh_160x_send_command(zh_160x_i2c_handle_t *handle, uint8_t command)
 {
-    ZH_ERROR_CHECK(zh_pcf8574_write(handle, (command & 0xF0) | 0x08) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
+    ZH_ERROR_CHECK(zh_pcf8574_write(&handle->zh_pcf8574_handle, (command & 0xF0) | 0x08) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
     ZH_ERROR_CHECK(_zh_160x_pulse(handle) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
-    ZH_ERROR_CHECK(zh_pcf8574_write(handle, (command << 4) | 0x08) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
+    ZH_ERROR_CHECK(zh_pcf8574_write(&handle->zh_pcf8574_handle, (command << 4) | 0x08) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
     ZH_ERROR_CHECK(_zh_160x_pulse(handle) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
     return ESP_OK;
 }
 
-static esp_err_t _zh_160x_send_data(zh_pcf8574_handle_t *handle, uint8_t data)
+static esp_err_t _zh_160x_send_data(zh_160x_i2c_handle_t *handle, uint8_t data)
 {
-    ZH_ERROR_CHECK(zh_pcf8574_write(handle, (data & 0xF0) | 0x09) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
+    ZH_ERROR_CHECK(zh_pcf8574_write(&handle->zh_pcf8574_handle, (data & 0xF0) | 0x09) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
     ZH_ERROR_CHECK(_zh_160x_pulse(handle) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
-    ZH_ERROR_CHECK(zh_pcf8574_write(handle, (data << 4) | 0x09) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
+    ZH_ERROR_CHECK(zh_pcf8574_write(&handle->zh_pcf8574_handle, (data << 4) | 0x09) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
     ZH_ERROR_CHECK(_zh_160x_pulse(handle) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
     return ESP_OK;
 }
 
-static esp_err_t _zh_160x_pulse(zh_pcf8574_handle_t *handle)
+static esp_err_t _zh_160x_pulse(zh_160x_i2c_handle_t *handle)
 {
-    ZH_ERROR_CHECK(zh_pcf8574_write_gpio(handle, ZH_PCF8574_GPIO_NUM_P2, ZH_PCF8574_GPIO_HIGH) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
+    ZH_ERROR_CHECK(zh_pcf8574_write_gpio(&handle->zh_pcf8574_handle, ZH_PCF8574_GPIO_NUM_P2, ZH_PCF8574_GPIO_HIGH) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
     vTaskDelay(1 / portTICK_PERIOD_MS);
-    ZH_ERROR_CHECK(zh_pcf8574_write_gpio(handle, ZH_PCF8574_GPIO_NUM_P2, ZH_PCF8574_GPIO_LOW) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
+    ZH_ERROR_CHECK(zh_pcf8574_write_gpio(&handle->zh_pcf8574_handle, ZH_PCF8574_GPIO_NUM_P2, ZH_PCF8574_GPIO_LOW) == ESP_OK, ESP_FAIL, NULL, "PCF8574 error.");
     vTaskDelay(1 / portTICK_PERIOD_MS);
     return ESP_OK;
 }
