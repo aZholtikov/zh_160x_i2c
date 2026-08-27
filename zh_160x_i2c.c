@@ -142,8 +142,8 @@ esp_err_t zh_160x_print_int(zh_160x_i2c_handle_t **handle, int num)
 {
     ZH_LOGI("160X print int started.");
     ZH_ERROR_CHECK(handle != NULL && *handle != NULL, ESP_ERR_INVALID_ARG, NULL, "160X print int failed. Invalid argument.");
-    char buffer[12];
-    sprintf(buffer, "%d", num);
+    char buffer[16];
+    snprintf(buffer, sizeof(buffer), "%d", num);
     ZH_ERROR_CHECK(zh_160x_print_char(handle, buffer) == ESP_OK, ESP_FAIL, NULL, "160X print int failed. PCF8574 error.");
     ZH_LOGI("160X print int completed successfully.");
     return ESP_OK;
@@ -154,7 +154,7 @@ esp_err_t zh_160x_print_float(zh_160x_i2c_handle_t **handle, float num, uint8_t 
     ZH_LOGI("160X print float started.");
     ZH_ERROR_CHECK(handle != NULL && *handle != NULL, ESP_ERR_INVALID_ARG, NULL, "160X print float failed. Invalid argument.");
     char buffer[16];
-    sprintf(buffer, "%.*f", precision, num);
+    snprintf(buffer, sizeof(buffer), "%.*f", precision, num);
     ZH_ERROR_CHECK(zh_160x_print_char(handle, buffer) == ESP_OK, ESP_FAIL, NULL, "160X print float failed. PCF8574 error.");
     ZH_LOGI("160X print float completed successfully.");
     return ESP_OK;
