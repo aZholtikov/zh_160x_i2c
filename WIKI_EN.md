@@ -594,4 +594,4 @@ limitations under the License.
 
 ---
 
-*Generated for zh_160x_i2c v5.0.0*
+*Generated for zh_160x_i2c v5.0.1*

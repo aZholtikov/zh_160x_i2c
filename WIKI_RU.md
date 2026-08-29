@@ -594,4 +594,4 @@ void app_main(void)
 
 ---
 
-*Generated for zh_160x_i2c v5.0.0*
+*Generated for zh_160x_i2c v5.0.1*

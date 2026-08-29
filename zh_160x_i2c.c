@@ -90,7 +90,7 @@ esp_err_t zh_160x_init(zh_pcf8574_handle_t **expander, zh_160x_i2c_handle_t **ha
     ZH_ERROR_CHECK(*handle != NULL, ESP_ERR_NO_MEM, NULL, "160X initialization failed. Failed to allocate 160X handle.");
     (*handle)->zh_pcf8574_handle = *expander;
     (*handle)->zh_160x_i2c_lcd_size = size;
-    ZH_ERROR_CHECK(_zh_160x_lcd_init(*handle) == ESP_OK, ESP_FAIL, NULL, "160X initialization failed. PCF8574 error.");
+    ZH_ERROR_CHECK(_zh_160x_lcd_init(*handle) == ESP_OK, ESP_FAIL, heap_caps_free(*handle); *handle = NULL, "160X initialization failed. PCF8574 error.");
     ZH_LOGI("160X initialization completed successfully.");
     return ESP_OK;
 }
